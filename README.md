@@ -39,14 +39,6 @@ Evaluate ViT-Base in a single GPU (`${IMAGENET_DIR}` is a directory containing `
 python main_finetune.py --eval --resume ${FINETUNED_CHECKPOINT_PATH} --model vit_base_patch16 --batch_size 16 --data_path ${IMAGENET_DIR}
 ```
 
-## Copyright Notice
-
-Copyright © [Kimdanni/Cvlab] [2024]. All rights reserved.
-
-This code is for educational and research purposes only. It is inspired by the methodologies described in the above paper and is intended for non-commercial use.
-
-Please refer to the original paper for the complete methodology, experimental setup, and results.
-
 ## Acknowledgements
 
 We would like to acknowledge the authors of the CrossMAE paper for their foundational work, which has greatly informed this implementation.
