@@ -41,7 +41,7 @@ python main_finetune.py --eval --resume ${FINETUNED_CHECKPOINT_PATH} --model vit
 
 ## Copyright Notice
 
-Copyright © [Your Name/Organization] [Year]. All rights reserved.
+Copyright © [Kimdanni/Cvlab] [2024]. All rights reserved.
 
 This code is for educational and research purposes only. It is inspired by the methodologies described in the above paper and is intended for non-commercial use.
 
