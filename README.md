@@ -2,7 +2,7 @@
 
 This repository contains an implementation of the DiffMAE model as described in the paper:
 
-**"DiffMAE: Diffusion Models for Masked Autoencoders"**  
+**"DiffMAE: Diffusion Models for Masked Autoencoders"**
 (arXiv: [2304.03283](https://arxiv.org/pdf/2304.03283))
 
 ## Overview
@@ -38,13 +38,6 @@ Evaluate ViT-Base in a single GPU (`${IMAGENET_DIR}` is a directory containing `
 ```sh
 python main_finetune.py --eval --resume ${FINETUNED_CHECKPOINT_PATH} --model vit_base_patch16 --batch_size 16 --data_path ${IMAGENET_DIR}
 ```
-This should give:
-```
-* Acc@1 83.722 Acc@5 96.686 loss 0.729
-```
-
-You could replace `vit_base_patch16` with `vit_small_patch16` or `vit_large_patch16` to evaluate ViT-S or ViT-L. To work with 448 input resolution, please append `--input_size 448` to the command line.
-
 
 ## Copyright Notice
 
