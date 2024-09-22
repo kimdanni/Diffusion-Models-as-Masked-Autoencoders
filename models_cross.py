@@ -50,7 +50,6 @@ class TimestepEmbedder(nn.Module):
         :param max_period: controls the minimum frequency of the embeddings.
         :return: an (N, D) Tensor of positional embeddings.
         """
-        # https://github.com/openai/glide-text2im/blob/main/glide_text2im/nn.py
         half = dim // 2
         freqs = torch.exp(
             -math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half
@@ -61,10 +60,20 @@ class TimestepEmbedder(nn.Module):
             embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
         return embedding
 
-    def forward(self, t):
+    def forward(self, t, token_size):
+        """
+        :param t: Timesteps of shape (batch_size,)
+        :param token_size: The number of tokens (sequence length) to expand the embedding.
+        :return: A tensor of shape (batch_size, token_size, hidden_size)
+        """
         t_freq = self.timestep_embedding(t, self.frequency_embedding_size)
         t_emb = self.mlp(t_freq)
+        
+        # (batch_size, 1, hidden_size) -> (batch_size, token_size, hidden_size)
+        t_emb = t_emb[:, None, :].expand(-1, token_size, -1)
+        
         return t_emb
+
 
 class WeightedFeatureMaps(nn.Module):
     def __init__(self, k, embed_dim, *, norm_layer=nn.LayerNorm, decoder_depth):
@@ -294,8 +303,8 @@ class MaskedAutoencoderViT(nn.Module):
             .masked_select(mask.bool().unsqueeze(-1))
             .reshape(N, -1, self.mask_token.shape[-1])
         )
-        t = self.t_embedder(t)
         mask_token = self.mask_token + x.masked_select(mask.bool().unsqueeze(-1)).reshape(N, -1, self.mask_token.shape[-1])
+        t = self.t_embedder(t, token_size=mask_token.shape[1])
         x = pos_embed + mask_token
         x = x + t
         return x
