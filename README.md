@@ -31,9 +31,9 @@ To pre-train ViT-Base, run the following on 4 GPUs:
 ```sh
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 --master_port 1234 main_finetune.py --batch_size 256 --model vit_base_patch16 --finetune output/imagenet-diffmae-vitb-pretrain-wfm-mr0.75-dd12-ep1600/checkpoint-1600.pth --epoch 100 --blr 5e-4 --layer_decay 0.65 --weight_decay 0.05 --drop_path 0.1 --reprob 0.25 --mixup 0.8 --cutmix 1.0 --dist_eval --data_path ${IMAGENET_DIR} --output_dir output/imagenet-diffmae-vitb-finetune-wfm-mr0.75-dd12-ep1600 --enable_flash_attention2 --multi_epochs_dataloader
 ```
-| Model  | Epoch  | Accuracy |
-|--------|--------|----------|
-| vit_b  | 380    | 82.35%   |
+| Model  | Epoch  | norm_pix | Accuracy |
+|--------|--------|----------|----------|
+| vit_b  | 380    |    X     | 82.35%   |
 
 Finetune and pretrain code can be found here:  
 [Checkpoint](https://drive.google.com/drive/folders/1kGV-AQdn76H-JyKW5I4GSqAlPY7Fj_GG?usp=drive_link)
