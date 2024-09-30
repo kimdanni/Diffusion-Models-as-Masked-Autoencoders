@@ -24,7 +24,6 @@ To pre-train ViT-Base, run the following on 4 GPUs:
 ```sh
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 --master_port 1234 main_pretrain.py --batch_size 1024 --model mae_vit_base_patch16 --norm_pix_loss --blr 1.5e-4 --weight_decay 0.05 --data_path ${IMAGENET_DIR} --num_workers 20 --enable_flash_attention2 --multi_epochs_dataloader --output_dir output/imagenet-diffmae-vitb-pretrain-wfm-mr0.75-dd12-ep1600 --norm_pix_loss --cross_mae --weight_fm --decoder_depth 12 --mask_ratio 0.75 --epochs 1600 --warmup_epochs 40
 ```
-
 To train ViT-Small or ViT-Large, set `--model mae_vit_small_patch16` or `--model mae_vit_large_patch16`. You can use `--accum_iter` to perform gradient accumulation if your hardware could not fit the batch size. [FlashAttention 2](https://github.com/Dao-AILab/flash-attention) should be installed with `pip install flash-attn --no-build-isolation`.
 
 ### Fine-tuning DiffMAE
@@ -32,6 +31,12 @@ To pre-train ViT-Base, run the following on 4 GPUs:
 ```sh
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 --master_port 1234 main_finetune.py --batch_size 256 --model vit_base_patch16 --finetune output/imagenet-diffmae-vitb-pretrain-wfm-mr0.75-dd12-ep1600/checkpoint-1600.pth --epoch 100 --blr 5e-4 --layer_decay 0.65 --weight_decay 0.05 --drop_path 0.1 --reprob 0.25 --mixup 0.8 --cutmix 1.0 --dist_eval --data_path ${IMAGENET_DIR} --output_dir output/imagenet-diffmae-vitb-finetune-wfm-mr0.75-dd12-ep1600 --enable_flash_attention2 --multi_epochs_dataloader
 ```
+| Model  | Epoch  | Accuracy |
+|--------|--------|----------|
+| vit_b  | 380    | 82.35%   |
+
+Finetune and pretrain code can be found here:  
+[Checkpoint](https://drive.google.com/drive/folders/1kGV-AQdn76H-JyKW5I4GSqAlPY7Fj_GG?usp=drive_link)
 
 ## Evaluation
 Evaluate ViT-Base in a single GPU (`${IMAGENET_DIR}` is a directory containing `{train, val}` sets of ImageNet). `${FINETUNED_CHECKPOINT_PATH}` is the path to the fine-tuned checkpoint:
