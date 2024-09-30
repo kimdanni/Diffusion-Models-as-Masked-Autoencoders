@@ -1,4 +1,4 @@
-# DiffMAE Implementation
+# Unofficial PyTorch implementation of DiffMAE
 
 This repository contains an implementation of the DiffMAE model as described in the paper:
 
