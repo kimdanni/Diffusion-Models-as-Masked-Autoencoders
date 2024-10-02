@@ -32,7 +32,7 @@ from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
 import util.lr_decay as lrd
 import util.misc as misc
 from util.datasets import build_dataset
-from util.pos_embed import interpolate_pos_embed
+from util.pos_embed import interpolate_pos_embed, interpolate_time_embed
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
 
 from transformer_utils import handle_flash_attn
@@ -255,7 +255,10 @@ def main(args):
 
         # interpolate position embedding
         interpolate_pos_embed(model, checkpoint_model)
-
+        if 'time_embed' in checkpoint_model:
+            if checkpoint_model['time_embed'].shape != state_dict['time_embed'].shape:
+                print(f"Adjusting time_embed shape from {checkpoint_model['time_embed'].shape} to {state_dict['time_embed'].shape}")
+                checkpoint_model['time_embed'] = interpolate_time_embed(checkpoint_model['time_embed'], state_dict['time_embed'])
         # load pre-trained model
         msg = model.load_state_dict(checkpoint_model, strict=False)
         print(msg)

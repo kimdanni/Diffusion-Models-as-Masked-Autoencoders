@@ -17,6 +17,8 @@ import torch.nn as nn
 from transformer_utils import Block, PatchEmbed
 
 from util.pos_embed import get_2d_sincos_pos_embed
+from scheduler.diffusion import CustomDDPMScheduler
+from scheduler.time_embedder import TimestepEmbedder
 
 
 class MaskedAutoencoderViT(nn.Module):
@@ -59,6 +61,11 @@ class MaskedAutoencoderViT(nn.Module):
         # --------------------------------------------------------------------------
 
         self.norm_pix_loss = norm_pix_loss
+        # --------------------------------------------------------------------------
+        # Diffusion
+        self.scheduler = CustomDDPMScheduler(factor=1.0, num_train_timesteps=1000, beta_start=0.0001, beta_end=0.02)
+        self.t_embedder = TimestepEmbedder(hidden_size=embed_dim, frequency_embedding_size=256)
+        self.norm_pix_loss = norm_pix_loss
 
         self.initialize_weights()
 
@@ -79,6 +86,10 @@ class MaskedAutoencoderViT(nn.Module):
         torch.nn.init.normal_(self.cls_token, std=.02)
         torch.nn.init.normal_(self.mask_token, std=.02)
 
+        # Initialize timestep embedding MLP:
+        nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
+        nn.init.normal_(self.t_embedder.mlp[2].weight, std=0.02)
+       
         # initialize nn.Linear and nn.LayerNorm
         self.apply(self._init_weights)
 
@@ -149,10 +160,16 @@ class MaskedAutoencoderViT(nn.Module):
 
     def forward_encoder(self, x, mask_ratio):
         # embed patches
-        x = self.patch_embed(x)
+        x, timesteps = self.scheduler.noise_sampling(x)
+        x_noise = x.clone().detach()
 
+        # embed patches
+        x = self.patch_embed(x)
+        t = self.t_embedder(timesteps, token_size=x.shape[1])
+        
         # add pos embed w/o cls token
         x = x + self.pos_embed[:, 1:, :]
+        x = x + t
 
         # masking: length -> length * mask_ratio
         x, mask, ids_restore = self.random_masking(x, mask_ratio)
@@ -167,7 +184,7 @@ class MaskedAutoencoderViT(nn.Module):
             x = blk(x)
         x = self.norm(x)
 
-        return x, mask, ids_restore
+        return x, mask, ids_restore, x_noise
 
     def forward_decoder(self, x, ids_restore):
         # embed tokens
@@ -195,31 +212,54 @@ class MaskedAutoencoderViT(nn.Module):
 
         return x
 
-    def forward_loss(self, imgs, pred, mask):
+    def forward_loss(self, imgs, noise_x, pred, mask):
         """
         imgs: [N, 3, H, W]
         pred: [N, L, p*p*3]
-        mask: [N, L], 0 is keep, 1 is remove, 
+        mask: [N, L], 0 is keep, 1 is remove,
         """
-        target = self.patchify(imgs)
+        target_denoise = self.patchify(imgs)
+        target_recon = self.patchify(noise_x)
+
         if self.norm_pix_loss:
-            mean = target.mean(dim=-1, keepdim=True)
-            var = target.var(dim=-1, keepdim=True)
-            target = (target - mean) / (var + 1.e-6)**.5
+            target_denoise = self.normalize(target_denoise)
+            target_recon = self.normalize(target_recon)
 
-        loss = (pred - target) ** 2
-        loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
+        recon_loss = self.compute_recon_loss(pred, target_recon, mask)
+        denoise_loss = self.compute_denoise_loss(pred, target_denoise, mask)
 
-        loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
+        total_loss = denoise_loss + recon_loss
+
+        return total_loss
+
+    def normalize(self, target):
+        """Normalize the target tensor."""
+        mean = target.mean(dim=-1, keepdim=True)
+        var = target.var(dim=-1, keepdim=True)
+        return (target - mean) / (var + 1.e-6) ** 0.5
+
+    def compute_denoise_loss(self, pred, target_denoise, mask):
+        """Compute denoise loss."""
+        mask = (1 - mask)
+        denoise_loss = (pred - target_denoise) ** 2
+        denoise_loss = denoise_loss.mean(dim=-1)
+        denoise_loss = (denoise_loss * mask).sum() / mask.sum()
+        return denoise_loss
+
+    def compute_recon_loss(self, pred, target_recon, mask):
+        """Compute reconstruction loss."""
+        recon_loss = (pred - target_recon) ** 2
+        recon_loss = recon_loss.mean(dim=-1)
+        recon_loss = (recon_loss * mask).sum() / mask.sum()
+        return recon_loss
+
+
+    def forward(self, imgs, mask_ratio=0.75):
+        latent, mask, ids_restore, noise_x = self.forward_encoder(imgs, mask_ratio)
+        pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
+        loss = self.forward_loss(imgs, noise_x, pred, mask)
         return loss
 
-    def forward(self, imgs, mask_ratio=0.75, **kwargs):
-        with torch.cuda.amp.autocast():
-            latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
-            pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
-            loss = self.forward_loss(imgs, pred, mask)
-        # return loss, pred, mask
-        return loss
 
 
 def mae_vit_small_patch16_dec512d8b(**kwargs):

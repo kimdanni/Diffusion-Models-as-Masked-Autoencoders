@@ -3,12 +3,12 @@ import torch
 
 
 class CustomDDPMScheduler(DDPMScheduler):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, factor=1.2, *args, **kwargs):
         # Initialize the base class first
         super().__init__(*args, **kwargs)
-        self._adjust_betas(0.8)  # Adjust the betas by multiplying them by 0.8
+        self._adjust_betas(factor)  # Adjust the betas by multiplying them by 0.8
 
-    def _adjust_betas(self, factor: float = 0.8):
+    def _adjust_betas(self, factor):
         """
         Adjust beta values by a specified factor after initialization and recompute alphas and related variables.
         """

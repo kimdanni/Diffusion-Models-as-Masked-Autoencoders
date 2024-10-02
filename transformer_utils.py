@@ -10,6 +10,7 @@ from timm.layers.helpers import to_2tuple
 
 torch_version = torch.__version__
 is_torch2 = torch_version.startswith('2.') 
+is_torch2 = False
 
 class Mlp(nn.Module):
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):

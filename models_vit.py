@@ -17,6 +17,7 @@ import torch.nn as nn
 import timm
 import timm.models.vision_transformer
 
+from scheduler.time_embedder import TimestepEmbedder
 new_timm = '0.9' in timm.__version__ 
 
 class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
@@ -43,9 +44,13 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
             
         B = x.shape[0]
         x = self.patch_embed(x)
-
+        # NOTE: hard code the timestep to 12
+        timesteps = torch.full((B,), 12, device=x.device).long()
+        t = self.t_embed(timesteps, token_size=x.shape[1])
+        x = x + t
         cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
         x = torch.cat((cls_tokens, x), dim=1)
+        
         x = x + self.pos_embed
         x = self.pos_drop(x)
 

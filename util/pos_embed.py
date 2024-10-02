@@ -8,7 +8,7 @@
 # --------------------------------------------------------
 
 import numpy as np
-
+import torch.nn.functional as F
 import torch
 
 def get_2d_sincos_pos_embed_for_coords(embed_dim, coords, image_size=224, patch_size=16):
@@ -118,3 +118,26 @@ def interpolate_pos_embed(model, checkpoint_model):
             new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
             checkpoint_model['pos_embed'] = new_pos_embed
 
+
+def interpolate_time_embed(model, checkpoint_model):
+    """
+    Interpolates the time embedding from the checkpoint to match the model's time embedding shape.
+    
+    Args:
+        model (MaskedAutoencoderViT): The current model instance.
+        checkpoint_model (dict): Dictionary containing the checkpoint model state.
+
+    Returns:
+        None: Modifies checkpoint_model in place.
+    """
+    if 't_embedder' in checkpoint_model and hasattr(model, 't_embedder'):
+        checkpoint_time_embed = checkpoint_model['t_embedder']
+        model_time_embed = model.t_embedder.mlp[0].weight  # Assuming this is the correct layer for time embedding
+
+        # Perform interpolation
+        if checkpoint_time_embed.dim() == 2 and model_time_embed.dim() == 2:
+            new_shape = model_time_embed.shape
+            interpolated_time_embed = F.interpolate(checkpoint_time_embed.unsqueeze(0), size=new_shape[1], mode='linear', align_corners=True).squeeze(0)
+            checkpoint_model['t_embedder'] = interpolated_time_embed
+        else:
+            raise ValueError("Invalid dimensions for time embedding.")
