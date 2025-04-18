@@ -28,6 +28,11 @@ def build_dataset(is_train, args):
 
 
 def build_transform(is_train, args):
+    # NOTE: Modified for improved inpainting performance by normalizing to [-1, 1] range
+    #       This is the standard setting for diffusion-based models (e.g., DDPM, DiffMAE).
+    #       If you're aiming to maximize ImageNet classification performance instead,
+    #       consider using the standard ImageNet normalization:
+    #       mean = (0.485, 0.456, 0.406), std = (0.229, 0.224, 0.225)
     mean = (0.5, 0.5, 0.5)
     std = (0.5, 0.5, 0.5)
     # train transform
