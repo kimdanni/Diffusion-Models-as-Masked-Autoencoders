@@ -33,7 +33,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nproc_per_node=4 --master_port 1234 main
 ```
 | Model  | Epoch  | norm_pix | Accuracy |
 |--------|--------|----------|----------|
-| vit_b  | 380    |    X     | 82.35%   |
+| vit_b  | 400    |    X     | 82.35%   |
 
 ckpt can be found here:  
 [Checkpoint](https://drive.google.com/drive/folders/1kGV-AQdn76H-JyKW5I4GSqAlPY7Fj_GG?usp=drive_link)
